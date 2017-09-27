@@ -1,8 +1,8 @@
 {
   "experiment_dir": "test_experiment",
   "num_actions": 5,
-  "img_height": 210,
-  "img_width": 160,
+  "img_height": 96,
+  "img_width": 96,
   "num_channels": 3,
   "num_stack": 4,
   "batch_size": 8,

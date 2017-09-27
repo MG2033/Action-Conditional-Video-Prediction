@@ -41,26 +41,22 @@ class ACVP:
 
     def __init_template(self, x, actions):
         with tf.variable_scope('template'):
-            pad1 = pad('conv1_padding', x, 0, 1)
-            conv1 = conv2d('conv1', pad1, num_filters=64, kernel_size=(8, 8), padding='VALID', stride=(2, 2),
+            conv1 = conv2d('conv1', x, num_filters=64, kernel_size=(8, 8), padding='SAME', stride=(2, 2),
                            activation=tf.nn.relu, batchnorm_enabled=self.args.batchnorm_enabled,
                            l2_strength=self.args.l2_strength, bias=self.args.bias,
                            is_training=self.is_training)
 
-            pad2 = pad('conv2_padding', conv1, 1, 1)
-            conv2 = conv2d('conv2', pad2, num_filters=128, kernel_size=(6, 6), padding='VALID', stride=(2, 2),
+            conv2 = conv2d('conv2', conv1, num_filters=128, kernel_size=(6, 6), padding='SAME', stride=(2, 2),
                            activation=tf.nn.relu, batchnorm_enabled=self.args.batchnorm_enabled,
                            l2_strength=self.args.l2_strength, bias=self.args.bias,
                            is_training=self.is_training)
 
-            pad3 = pad('conv3_padding', conv2, 1, 1)
-            conv3 = conv2d('conv3', pad3, num_filters=128, kernel_size=(6, 6), padding='VALID', stride=(2, 2),
+            conv3 = conv2d('conv3', conv2, num_filters=128, kernel_size=(6, 6), padding='SAME', stride=(2, 2),
                            activation=tf.nn.relu, batchnorm_enabled=self.args.batchnorm_enabled,
                            l2_strength=self.args.l2_strength, bias=self.args.bias,
                            is_training=self.is_training)
 
-            pad4 = pad('conv4_padding', conv3, 0, 0)
-            conv4 = conv2d('conv4', pad4, num_filters=128, kernel_size=(4, 4), padding='VALID', stride=(2, 2),
+            conv4 = conv2d('conv4', conv3, num_filters=128, kernel_size=(4, 4), padding='SAME', stride=(2, 2),
                            activation=tf.nn.relu, batchnorm_enabled=self.args.batchnorm_enabled,
                            l2_strength=self.args.l2_strength, bias=self.args.bias,
                            is_training=self.is_training)
@@ -82,35 +78,31 @@ class ACVP:
             f_a_reshaped = tf.reshape(features_with_actions, [-1, h, w, 128], 'f_a_reshaped')
 
             h2, w2 = conv3.get_shape()[1].value, conv3.get_shape()[2].value
-            dpad1 = pad('deconv1_padding', f_a_reshaped, 0, 0)
-            deconv1 = conv2d_transpose('deconv1', dpad1, output_shape=[self.batch_size, h2, w2, 128],
+            deconv1 = conv2d_transpose('deconv1', f_a_reshaped, output_shape=[self.batch_size, h2, w2, 128],
                                        kernel_size=(4, 4),
-                                       padding='VALID', stride=(2, 2),
+                                       padding='SAME', stride=(2, 2),
                                        l2_strength=self.args.l2_strength, bias=self.args.bias, activation=tf.nn.relu,
                                        batchnorm_enabled=self.args.batchnorm_enabled, is_training=self.is_training)
 
             h3, w3 = conv2.get_shape()[1].value, conv2.get_shape()[2].value
-            dpad2 = pad('deconv2_padding', deconv1, 1, 1)
-            deconv2 = conv2d_transpose('deconv2', dpad2, output_shape=[self.batch_size, h3, w3, 128],
+            deconv2 = conv2d_transpose('deconv2', deconv1, output_shape=[self.batch_size, h3, w3, 128],
                                        kernel_size=(6, 6),
-                                       padding='VALID', stride=(2, 2),
+                                       padding='SAME', stride=(2, 2),
                                        l2_strength=self.args.l2_strength, bias=self.args.bias, activation=tf.nn.relu,
                                        batchnorm_enabled=self.args.batchnorm_enabled, is_training=self.is_training)
 
             h4, w4 = conv1.get_shape()[1].value, conv1.get_shape()[2].value
-            dpad3 = pad('deconv3_padding', deconv2, 1, 1)
-            deconv3 = conv2d_transpose('deconv3', dpad3, output_shape=[self.batch_size, h4, w4, 128],
+            deconv3 = conv2d_transpose('deconv3', deconv2, output_shape=[self.batch_size, h4, w4, 128],
                                        kernel_size=(6, 6),
-                                       padding='VALID', stride=(2, 2),
+                                       padding='SAME', stride=(2, 2),
                                        l2_strength=self.args.l2_strength, bias=self.args.bias, activation=tf.nn.relu,
                                        batchnorm_enabled=self.args.batchnorm_enabled, is_training=self.is_training)
 
-            dpad4 = pad('deconv4_padding', deconv3, 0, 1)
-            deconv4 = conv2d_transpose('deconv4', dpad4,
+            deconv4 = conv2d_transpose('deconv4', deconv3,
                                        output_shape=[self.batch_size, self.args.img_height, self.args.img_width,
                                                      self.args.num_channels],
                                        kernel_size=(8, 8),
-                                       padding='VALID', stride=(2, 2),
+                                       padding='SAME', stride=(2, 2),
                                        l2_strength=self.args.l2_strength, bias=self.args.bias, activation=None,
                                        batchnorm_enabled=self.args.batchnorm_enabled, is_training=self.is_training)
             return deconv4
@@ -136,12 +128,10 @@ class ACVP:
                                                       momentum=self.RMSProp_params[0], decay=0.95)
                 params = tf.trainable_variables()
                 grads = tf.gradients(self.loss, params)
-                pass
-                # grads = tf.sign(grads) * tf.sqrt(tf.maximum(tf.square(grads), 0.01))
-                #
-                # grads = list(zip(grads, params))
-
-                # self.train_op = optimizer.minimize(self.loss)
+                # Minimum squared gradient is 0.01
+                grads = [tf.sign(grads[i]) * tf.sqrt(tf.maximum(tf.square(grads[i]), 0.01)) for i in range(len(grads))]
+                grads = list(zip(grads, params))
+                self.train_op = optimizer.apply_gradients(grads)
 
     def __build(self):
         self.__init_global_epoch()
