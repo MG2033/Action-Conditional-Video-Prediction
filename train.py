@@ -7,16 +7,20 @@ class Train:
     """Trainer class for the CNN.
     It's also responsible for loading/saving the model checkpoints from/to experiments/experiment_name/checkpoint_dir"""
 
-    def __init__(self, sess, model, data, summarizer):
+    def __init__(self, sess, models, data, summarizer, args):
         self.sess = sess
-        self.model = model
-        self.args = self.model.args
+        self.phase1, self.phase2, self.phase3 = models
+        self.args = args
         self.saver = tf.train.Saver(max_to_keep=self.args.max_to_keep,
                                     keep_checkpoint_every_n_hours=10,
                                     save_relative_paths=True)
         # Summarizer references
         self.data = data
         self.summarizer = summarizer
+
+        # Step and Epoch initialization
+        self.__init_global_step()
+        self.__init_global_epoch()
 
         # Initializing the model
         self.init = None
@@ -39,7 +43,7 @@ class Train:
         :return:
         """
         print("Saving a checkpoint")
-        self.saver.save(self.sess, self.args.checkpoint_dir, self.model.global_step_tensor)
+        self.saver.save(self.sess, self.args.checkpoint_dir, self.global_step_tensor)
         print("Checkpoint Saved\n\n")
 
     def __load_model(self):
@@ -51,10 +55,30 @@ class Train:
         else:
             print("First time to train!\n\n")
 
+    def __init_global_epoch(self):
+        """
+        Create a global epoch tensor to totally save the process of the training
+        :return:
+        """
+        with tf.variable_scope('global_epoch'):
+            self.global_epoch_tensor = tf.Variable(-1, trainable=False, name='global_epoch')
+            self.global_epoch_input = tf.placeholder('int32', None, name='global_epoch_input')
+            self.global_epoch_assign_op = self.global_epoch_tensor.assign(self.global_epoch_input)
+
+    def __init_global_step(self):
+        """
+        Create a global step variable to be a reference to the number of iterations
+        :return:
+        """
+        with tf.variable_scope('global_step'):
+            self.global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
+            self.global_step_input = tf.placeholder('int32', None, name='global_step_input')
+            self.global_step_assign_op = self.global_step_tensor.assign(self.global_step_input)
+
     ############################################################################################################
     # Train and Test methods
     def train(self):
-        for cur_epoch in range(self.model.global_epoch_tensor.eval(self.sess) + 1, self.args.num_epochs + 1, 1):
+        for cur_epoch in range(self.global_epoch_tensor.eval(self.sess) + 1, self.args.num_epochs + 1, 1):
 
             # Initialize tqdm
             num_iterations = self.args.train_data_size // self.args.batch_size
@@ -104,8 +128,8 @@ class Train:
                     self.summarizer.add_summary(cur_step, summaries_dict=summaries_dict)
 
                     # Update the Current Epoch tensor
-                    self.model.global_epoch_assign_op.eval(session=self.sess,
-                                                           feed_dict={self.model.global_epoch_input: cur_epoch + 1})
+                    self.global_epoch_assign_op.eval(session=self.sess,
+                                                           feed_dict={self.global_epoch_input: cur_epoch + 1})
 
                     # Print in console
                     tqdm_batch.close()

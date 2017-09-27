@@ -29,7 +29,10 @@ def main():
 
     # Model creation
     print("Building the model...")
-    model = ACVP(config_args,5,reuse=False)
+    phase1 = ACVP(config_args, 1, reuse=False)
+    phase2 = ACVP(config_args, 3, reuse=True)
+    phase3 = ACVP(config_args, 5, reuse=True)
+
     print("Model is built successfully\n\n")
     exit(1)
 
