@@ -1,14 +1,18 @@
 {
   "experiment_dir": "test_experiment",
-  "num_epochs": 100,
-  "num_classes": 200,
+  "num_actions": 5,
+  "img_height": 210,
+  "img_width": 160,
+  "num_channels": 3,
+  "num_stack": 4,
   "batch_size": 8,
-  "l2_strength": 4e-5,
+  "num_epochs": 100,
+  "l2_strength": 0.0,
   "bias": 0.0,
   "learning_rate": 1e-3,
-  "batchnorm_enabled": true,
+  "batchnorm_enabled": false,
   "max_to_keep": 4,
   "save_model_every": 5,
   "test_every": 5,
-  "train_or_test": "test"
+  "train_or_test": "train"
 }
