@@ -117,7 +117,7 @@ def __conv2d_transpose_p(name, x, w=None, output_shape=None, kernel_size=(3, 3),
         stride = [1, stride[0], stride[1], 1]
         kernel_shape = [kernel_size[0], kernel_size[1], output_shape[-1], x.shape[-1]]
         if w == None:
-            w = __get_deconv_filter(kernel_shape, l2_strength)
+            w = get_deconv_filter(kernel_shape, l2_strength)
         __variable_summaries(w)
         deconv = tf.nn.conv2d_transpose(x, w, tf.stack(output_shape), strides=stride, padding=padding)
         if isinstance(bias, float):
@@ -371,7 +371,7 @@ def __variable_summaries(var):
 
 
 # Bilinear Upsampling Initializer
-def __get_deconv_filter(f_shape, l2_strength):
+def get_deconv_filter(f_shape, l2_strength):
     """
     The initializer for the bilinear convolution transpose filters
     :param f_shape: The shape of the filter used in convolution transpose.

@@ -29,7 +29,7 @@ def main():
 
     # Model creation
     print("Building the model...")
-    model = ACVP(config_args)
+    model = ACVP(config_args,5,reuse=False)
     print("Model is built successfully\n\n")
     exit(1)
 

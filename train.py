@@ -54,7 +54,78 @@ class Train:
     ############################################################################################################
     # Train and Test methods
     def train(self):
-        pass
+        for cur_epoch in range(self.model.global_epoch_tensor.eval(self.sess) + 1, self.args.num_epochs + 1, 1):
+
+            # Initialize tqdm
+            num_iterations = self.args.train_data_size // self.args.batch_size
+            tqdm_batch = tqdm(self.data.generate_batch(type='train'), total=num_iterations,
+                              desc="Epoch-" + str(cur_epoch) + "-")
+
+            # Initialize the current iterations
+            cur_iteration = 0
+
+            # Initialize classification accuracy and loss lists
+            loss_list = []
+            acc_list = []
+
+            # Loop by the number of iterations
+            for X_batch, y_batch in tqdm_batch:
+                # Get the current iteration for summarizing it
+                cur_step = self.model.global_step_tensor.eval(self.sess)
+
+                # Feed this variables to the network
+                feed_dict = {self.model.X: X_batch,
+                             self.model.y: y_batch,
+                             self.model.is_training: True
+                             }
+                # Run the feed_forward
+                _, loss, acc, summaries_merged = self.sess.run(
+                    [self.model.train_op, self.model.loss, self.model.accuracy, self.model.summaries_merged],
+                    feed_dict=feed_dict)
+                # Append loss and accuracy
+                loss_list += [loss]
+                acc_list += [acc]
+
+                # Update the Global step
+                self.model.global_step_assign_op.eval(session=self.sess,
+                                                      feed_dict={self.model.global_step_input: cur_step + 1})
+
+                self.summarizer.add_summary(cur_step, summaries_merged=summaries_merged)
+
+                if cur_iteration >= num_iterations - 1:
+                    avg_loss = np.mean(loss_list)
+                    avg_acc = np.mean(acc_list)
+                    # summarize
+                    summaries_dict = dict()
+                    summaries_dict['loss'] = avg_loss
+                    summaries_dict['acc'] = avg_acc
+
+                    # summarize
+                    self.summarizer.add_summary(cur_step, summaries_dict=summaries_dict)
+
+                    # Update the Current Epoch tensor
+                    self.model.global_epoch_assign_op.eval(session=self.sess,
+                                                           feed_dict={self.model.global_epoch_input: cur_epoch + 1})
+
+                    # Print in console
+                    tqdm_batch.close()
+                    print("Epoch-" + str(cur_epoch) + " | " + "loss: " + str(avg_loss) + " -" + " acc: " + str(
+                        avg_acc)[
+                                                                                                           :7])
+                    # Break the loop to finalize this epoch
+                    break
+
+                # Update the current iteration
+                cur_iteration += 1
+
+            # Save the current checkpoint
+            if cur_epoch % self.args.save_model_every == 0:
+                self.save_model()
+
+            # Test the model on validation or test data
+            if cur_epoch % self.args.test_every == 0:
+                self.test('val')
+                pass
 
     def test(self, test_type='val'):
         pass
